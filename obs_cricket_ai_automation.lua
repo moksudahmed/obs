@@ -12,24 +12,32 @@ local SCORE_FILE_PATH = ""
 --------------------------------------------------
 
 local VOICE_WELCOME = "AI_WELCOME"
+local VOICE_DOT = "AI_DOT"
+local VOICE_SINGLE = "AI_SINGLE"
+local VOICE_DOUBLE = "AI_DOUBLE"
+local VOICE_TRIPLE = "AI_TRIPLE"
 local VOICE_FOUR = "AI_FOUR"
 local VOICE_SIX = "AI_SIX"
 local VOICE_WICKET = "AI_WICKET"
 local VOICE_OVER = "AI_OVER"
-local VOICE_LAST_OVER = "AI_LAST_OVER"
+local VOICE_WIDE = "AI_WIDE"
+local VOICE_NO_BALL = "AI_NO_BALL"
+local VOICE_FREE_HIT = "AI_FREE_HIT"
+local VOICE_BYE = "AI_BYE"
+local VOICE_LEG_BYE = "AI_LEG_BYE"
 local VOICE_MATCH_END = "AI_MATCH_END"
+local VOICE_LAST_OVER = "AI_LAST_OVER"
 
 --------------------------------------------------
 -- INTERNAL STATE
 --------------------------------------------------
 
+local last_event = ""
 local last_crex_url = ""
 local last_cricbuzz_url = ""
 
-local last_score = 0
-local last_wickets = 0
-local last_over = -1
 local match_started = false
+local last_over = -1
 local last_over_announced = false
 
 --------------------------------------------------
@@ -57,11 +65,33 @@ function play_voice(source_name)
 end
 
 --------------------------------------------------
--- FILE UTILITIES
+-- TRIM
 --------------------------------------------------
 
 local function trim(s)
     return (s and s:gsub("^%s+", ""):gsub("%s+$", "")) or ""
+end
+
+--------------------------------------------------
+-- JSON VALUE READER
+--------------------------------------------------
+
+local function json_string(content,key)
+
+    local pattern = '"'..key..'":%s*"([^"]+)"'
+    return string.match(content,pattern)
+
+end
+
+local function json_number(content,key)
+
+    local pattern = '"'..key..'":%s*(%d+)'
+    local v = string.match(content,pattern)
+
+    if v then return tonumber(v) end
+
+    return nil
+
 end
 
 --------------------------------------------------
@@ -80,15 +110,73 @@ function read_score_file()
 
     local data = {}
 
-    for key,value in string.gmatch(content,'"(%w+)":%s*(%d+)') do
-        data[key] = tonumber(value)
-    end
+    data.score = json_number(content,"score")
+    data.wickets = json_number(content,"wickets")
+    data.over = json_number(content,"over")
+    data.ball = json_number(content,"ball")
+    data.event = json_string(content,"event")
 
     return data
+
 end
 
 --------------------------------------------------
--- MATCH EVENT DETECTION
+-- EVENT VOICE SYSTEM
+--------------------------------------------------
+
+function handle_event(event)
+
+    if event == last_event then return end
+    last_event = event
+
+    if event == "DOT" then
+        play_voice(VOICE_DOT)
+
+    elseif event == "SINGLE" then
+        play_voice(VOICE_SINGLE)
+
+    elseif event == "DOUBLE" then
+        play_voice(VOICE_DOUBLE)
+
+    elseif event == "TRIPLE" then
+        play_voice(VOICE_TRIPLE)
+
+    elseif event == "FOUR" then
+        play_voice(VOICE_FOUR)
+
+    elseif event == "SIX" then
+        play_voice(VOICE_SIX)
+
+    elseif event == "WICKET" then
+        play_voice(VOICE_WICKET)
+
+    elseif event == "OVER_COMPLETE" then
+        play_voice(VOICE_OVER)
+
+    elseif event == "WIDE" then
+        play_voice(VOICE_WIDE)
+
+    elseif event == "NO_BALL" then
+        play_voice(VOICE_NO_BALL)
+
+    elseif event == "FREE_HIT" then
+        play_voice(VOICE_FREE_HIT)
+
+    elseif event == "BYE" then
+        play_voice(VOICE_BYE)
+
+    elseif event == "LEG_BYE" then
+        play_voice(VOICE_LEG_BYE)
+
+    elseif event == "MATCH_RESULT" then
+        play_voice(VOICE_MATCH_END)
+
+    end
+
+end
+
+--------------------------------------------------
+-- MATCH PROCESS
 --------------------------------------------------
 
 function process_match()
@@ -100,6 +188,7 @@ function process_match()
     local wickets = data.wickets or 0
     local over = data.over or 0
     local ball = data.ball or 0
+    local event = data.event or ""
 
     --------------------------------------------------
     -- MATCH START
@@ -111,36 +200,10 @@ function process_match()
     end
 
     --------------------------------------------------
-    -- FOUR
+    -- EVENT HANDLER
     --------------------------------------------------
 
-    if score - last_score == 4 then
-        play_voice(VOICE_FOUR)
-    end
-
-    --------------------------------------------------
-    -- SIX
-    --------------------------------------------------
-
-    if score - last_score == 6 then
-        play_voice(VOICE_SIX)
-    end
-
-    --------------------------------------------------
-    -- WICKET
-    --------------------------------------------------
-
-    if wickets > last_wickets then
-        play_voice(VOICE_WICKET)
-    end
-
-    --------------------------------------------------
-    -- OVER COMPLETE
-    --------------------------------------------------
-
-    if over > last_over then
-        play_voice(VOICE_OVER)
-    end
+    handle_event(event)
 
     --------------------------------------------------
     -- LAST OVER
@@ -151,16 +214,6 @@ function process_match()
         last_over_announced = true
     end
 
-    --------------------------------------------------
-    -- MATCH END
-    --------------------------------------------------
-
-    if over >= 20 and ball == 6 then
-        play_voice(VOICE_MATCH_END)
-    end
-
-    last_score = score
-    last_wickets = wickets
     last_over = over
 
 end
@@ -284,7 +337,7 @@ end
 
 function script_description()
 
-    return "CREX + Cricbuzz Auto URL Updater + Cricket AI Voice Automation"
+    return "CREX + Cricbuzz Auto URL Updater + Advanced Cricket AI Voice Automation"
 
 end
 
