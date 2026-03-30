@@ -9,14 +9,13 @@ import os
 import threading
 from queue import Queue
 from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary
-
+from voice import speak
 # ---------------------------------------
 # CONFIG
 # ---------------------------------------
-CREX_URL = "https://crex.com/scoreboard/119K/2FX/2nd-Match/14F/124/mal-vs-pnj-2nd-match-european-portugal-t10-2026/live"
+CREX_URL = "https://crex.com/cricket-live-score/csk-vs-rr-3rd-match-indian-premier-league-2026-match-updates-10Y1"
 OUTPUT_FILE = "C:/cricket_voices/score.json"
-VOICE_FOLDER = "C:/cricket_voices/"
-VOICE = "bn-BD-NabanitaNeural"
+
 REFRESH_INTERVAL = 1  # seconds
 
 # ---------------------------------------
@@ -133,20 +132,43 @@ COMMENTARY = {
     ],
 
     "WELCOME": [
-        """নতুন যারা এখনই লাইভে যুক্ত হয়েছেন, আপনাদের স্বাগতম!
+        """সবাইকে স্বাগতম লাইভ ক্রিকেট কভারেজে!
 
-দক্ষিণ আফ্রিকা তাদের ইনিংস শেষ করেছে ২০ ওভারে ৫ উইকেট হারিয়ে ১৬৪ রানে। 
-এখন নিউজিল্যান্ড ব্যাট করছে, তাদের জবাবী ইনিংস চলছে। 
+আজ আইপিএল ২০২৬-এ আমরা উপভোগ করতে যাচ্ছি এক দারুণ ম্যাচ—
+চেন্নাই সুপার কিংস বনাম রাজস্থান রয়ালস।
 
-সাথে থাকুন, আমরা দেব বল বাই বল আপডেট এবং রোমাঞ্চকর মুহূর্তের সম্পূর্ণ বাংলা ধারাভাষ্য। 
-ম্যাচের উত্তেজনা এখনো তুঙ্গে, কোথাও যাবেন না!""",
+টসে জিতে রাজস্থান রয়ালস প্রথমে বোলিং করার সিদ্ধান্ত নিয়েছে, 
+অর্থাৎ চেন্নাই সুপার কিংস শুরু করবে ব্যাটিং দিয়ে।
 
-        """স্বাগতম ক্রিকেটপ্রেমীরা!
+আজকের এই ম্যাচে থাকছে বল বাই বল আপডেট, প্রতিটি রানের বিশ্লেষণ 
+এবং সম্পূর্ণ বাংলা ধারাভাষ্য।
 
-দক্ষিণ আফ্রিকার ইনিংস শেষ হয়েছে ১৬৪/৫ তে, ২০ ওভারের পর। 
-এখন নিউজিল্যান্ড ব্যাট করছে, এবং প্রতিটি বলেই রয়েছে রোমাঞ্চ। 
+প্রথম বল থেকে শেষ ওভার পর্যন্ত আমাদের সঙ্গে থাকুন, কারণ আজকের খেলায় থাকছে 
+দারুণ সব শট, বড় ছক্কা, গুরুত্বপূর্ণ উইকেট এবং অসাধারণ সব মুহূর্ত।
 
-লাইভ স্কোর ও বাংলা ধারাভাষ্যের জন্য চোখ রাখুন আমাদের সঙ্গে!"""
+দুই শক্তিশালী দল মাঠে—চেন্নাই সুপার কিংস এবং রাজস্থান রয়ালস—
+এখন দেখার বিষয়, কে শেষ পর্যন্ত জয় ছিনিয়ে নিতে পারে!
+
+চলুন, শুরু করা যাক আজকের এই জমজমাট ম্যাচ!""",
+
+        """সবাইকে স্বাগতম লাইভ ক্রিকেট কভারেজে!
+
+আজ আইপিএল ২০২৬-এ আমরা উপভোগ করতে যাচ্ছি এক দারুণ ম্যাচ—
+চেন্নাই সুপার কিংস বনাম রাজস্থান রয়ালস।
+
+টসে জিতে রাজস্থান রয়ালস প্রথমে বোলিং করার সিদ্ধান্ত নিয়েছে, 
+অর্থাৎ চেন্নাই সুপার কিংস শুরু করবে ব্যাটিং দিয়ে।
+
+আজকের এই ম্যাচে থাকছে বল বাই বল আপডেট, প্রতিটি রানের বিশ্লেষণ 
+এবং সম্পূর্ণ বাংলা ধারাভাষ্য।
+
+প্রথম বল থেকে শেষ ওভার পর্যন্ত আমাদের সঙ্গে থাকুন, কারণ আজকের খেলায় থাকছে 
+দারুণ সব শট, বড় ছক্কা, গুরুত্বপূর্ণ উইকেট এবং অসাধারণ সব মুহূর্ত।
+
+দুই শক্তিশালী দল মাঠে—চেন্নাই সুপার কিংস এবং রাজস্থান রয়ালস—
+এখন দেখার বিষয়, কে শেষ পর্যন্ত জয় ছিনিয়ে নিতে পারে!
+
+চলুন, শুরু করা যাক আজকের এই জমজমাট ম্যাচ!"""
     ],
 
     "MATCH_RESULT": [
@@ -160,16 +182,11 @@ COMMENTARY = {
 # ---------------------------------------
 # STATE
 # ---------------------------------------
-last_runs = 100
-last_wickets = 2
-last_over = 4
-last_ball = 5
+last_runs = None
+last_wickets = None
+last_over = None
+last_ball = None
 welcome_played = False
-
-# ---------------------------------------
-# VOICE SYSTEM
-# ---------------------------------------
-voice_queue = Queue()
 
 def parse_winning_info(text):
     """
@@ -366,53 +383,7 @@ def generate_continuous_commentary(events, batsmen, runs, wickets, over, team1=N
 
     # Combine all commentary parts naturally
     return " ".join(parts)
-    
-def voice_worker():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    while True:
-        event, text, final, temp = voice_queue.get()
-
-        try:
-            # Generate temp file
-            loop.run_until_complete(generate_voice(text, temp))
-
-            # 🔁 Retry replace (Windows safe)
-            for i in range(5):
-                try:
-                    if os.path.exists(final):
-                        os.remove(final)  # remove old file first
-
-                    os.rename(temp, final)  # safer than replace
-                    break
-                except PermissionError:
-                    time.sleep(0.2)  # wait and retry
-                except Exception as e:
-                    print("Rename Error:", e)
-                    break
-
-        except Exception as e:
-            print("🔊 Voice Error:", e)
-
-        voice_queue.task_done()
-      
-
-threading.Thread(target=voice_worker, daemon=True).start()
-
-        
-async def generate_voice(text, path):
-    communicate = edge_tts.Communicate(text, VOICE)
-    await communicate.save(path)
-
-def speak(event, text):
-    print(f"🎙speak: {text}")
-    os.makedirs(VOICE_FOLDER, exist_ok=True)
-    final = os.path.join(VOICE_FOLDER, f"{event}.mp3")
-    temp = final + ".tmp"
-    voice_queue.put((event, text, final, temp))
-    print(f"🎙 {event}: {text}")
-
+   
 # ---------------------------------------
 # PARSE SCORE (ROBUST)
 # ---------------------------------------
@@ -443,7 +414,10 @@ def clean_name(name):
     words = name.strip().split()
     return " ".join(words[-2:])
 
-
+def remove_first_part(name):
+    parts = name.split(" ", 1)
+    return parts[1] if len(parts) > 1 else name
+    
 def parse_batsmen(text):
     """
     Extract exactly 2 batsmen (clean & accurate)
@@ -475,12 +449,12 @@ def parse_batsmen(text):
     if match:
         return [
             {
-                "name": clean_name(match.group(1)),
+                "name": remove_first_part(clean_name(match.group(1))),
                 "runs": int(match.group(2)),
                 "balls": int(match.group(3)),
             },
             {
-                "name": clean_name(match.group(4)),
+                "name": remove_first_part(clean_name(match.group(4))),
                 "runs": int(match.group(5)),
                 "balls": int(match.group(6)),
             }
@@ -661,7 +635,12 @@ def detect_event(runs, wickets, over, ball, commentary_text=""):
     # -----------------------------
     is_wide = "wide" in text
     is_no_ball = "no ball" in text or "no-ball" in text
-
+    # -----------------------------
+    # 🔵 OVER COMPLETE
+    # -----------------------------
+    if over_changed:
+        events.append("OVER_COMPLETE")
+        
     # -----------------------------
     # 🟥 WICKET
     # -----------------------------
@@ -710,11 +689,7 @@ def detect_event(runs, wickets, over, ball, commentary_text=""):
             else:
                 events.append("DOT")
 
-    # -----------------------------
-    # 🔵 OVER COMPLETE
-    # -----------------------------
-    if over_changed:
-        events.append("OVER_COMPLETE")
+    
 
     # remove duplicates
     events = list(dict.fromkeys(events))
@@ -804,7 +779,7 @@ def main():
                         info["margin"],
                         info["type"]
                     )
-
+                    speak("WELCOME", line)
                     print(line)
                     continue
                
@@ -816,14 +791,14 @@ def main():
                 batsmen = parse_batsmen(text)
 
                 # Debug
-                """for b in batsmen:
-                    print("Batsman:", b)"""
+                for b in batsmen:
+                    print("Batsman:", b)
 
                 # ---------------------------------------
                 # DETECT EVENTS
                 # ---------------------------------------
                 events = detect_event(runs, wickets, over, ball, last_status_message)
-               
+                
                 if not events:
                     time.sleep(REFRESH_INTERVAL)
                     continue
@@ -852,6 +827,7 @@ def main():
                     print(events[0])
                     # Speak once (IMPORTANT FIX ✅)
                     speak(events[0], line)
+                    
 
             except Exception as e:
                 print("MAIN ERROR:", e)
