@@ -204,7 +204,7 @@ def generate_wicket_commentary(runs, wickets, over, batsman=None):
     return random.choice(templates)
 # ---------------------------------------
 
-def generate_winning_commentary(team, margin, win_type):
+def generate_winning_commentary2(team, margin, win_type):
     """
     Advanced natural Bangla winning commentary
     - More expressive & emotional
@@ -267,4 +267,79 @@ def generate_winning_commentary(team, margin, win_type):
     if win_type == "wickets" and margin >= 4:
         return random.choice(chase_templates)
 
+    return random.choice(templates)
+    
+def generate_winning_commentary(team, margin, win_type):
+    """
+    Ultra-natural Bangla winning commentary
+    - Long, emotional, TV-style narration
+    - Smooth storytelling flow
+    - Context-aware variations
+    """
+
+    if not team:
+        return None
+
+    type_bn = "উইকেটে" if win_type == "wickets" else "রানে"
+
+    # 🎯 Balanced win
+    templates = [
+        f"ম্যাচ শেষ, এবং দারুণ এক জয়ের সাক্ষী থাকলো আজকের এই লড়াই। {team} {margin} {type_bn} ম্যাচটি জিতে নিয়েছে অসাধারণ পারফরম্যান্সের মাধ্যমে। শুরু থেকেই তারা ছিল বেশ আত্মবিশ্বাসী, পরিকল্পনা অনুযায়ী খেলেছে, এবং প্রতিটি বিভাগে নিজেদের শ্রেষ্ঠত্ব দেখিয়েছে। শেষ পর্যন্ত সেই ধারাবাহিকতাই এনে দিল এই গুরুত্বপূর্ণ জয়।",
+
+        f"খেলা শেষ! {team} {margin} {type_bn} একটি চমৎকার জয় তুলে নিল আজ। পুরো ম্যাচ জুড়ে তারা ছিল অনেক বেশি সংগঠিত এবং নিয়ন্ত্রিত। ব্যাটিং হোক বা বোলিং—সব জায়গাতেই ছিল স্পষ্ট পরিকল্পনা, আর সেটার ফলই এই জয়।",
+
+        f"জয় {team}-এর! {margin} {type_bn} তারা আজকের ম্যাচে সত্যিই পরিপূর্ণ ক্রিকেট খেলেছে। প্রতিটি মুহূর্তে ছিল আত্মবিশ্বাস, ছিল নিয়ন্ত্রণ, আর সেই কারণেই শেষ পর্যন্ত তারা ম্যাচটা নিজেদের করে নিতে পেরেছে।",
+    ]
+
+    # 🔥 Dominating performance
+    dominant_templates = [
+        f"একতরফা লড়াই বলা যায় আজকের ম্যাচটি! {team} {margin} {type_bn} বিশাল ব্যবধানে জয় তুলে নিয়েছে। শুরু থেকেই ম্যাচের নিয়ন্ত্রণ ছিল তাদের হাতে, এবং প্রতিপক্ষকে এক মুহূর্তের জন্যও ঘুরে দাঁড়ানোর সুযোগ দেয়নি। এমন পারফরম্যান্স নিঃসন্দেহে তাদের আত্মবিশ্বাস অনেক বাড়িয়ে দেবে।",
+
+        f"সম্পূর্ণ আধিপত্য দেখাল {team}! {margin} {type_bn} এই বড় জয় প্রমাণ করে তারা আজ কতটা প্রস্তুত ছিল। ব্যাটিং, বোলিং, ফিল্ডিং—সব জায়গাতেই ছিল নিখুঁত পারফরম্যান্স, এবং প্রতিপক্ষকে পুরোপুরি চাপে ফেলে দিয়েছে।",
+
+        f"দাপুটে জয়! {team} {margin} {type_bn} ব্যবধানে ম্যাচ জিতে একেবারে আধিপত্য বিস্তার করেছে। শুরু থেকেই তারা ম্যাচটা নিজেদের নিয়ন্ত্রণে নিয়ে নেয় এবং শেষ পর্যন্ত সেই নিয়ন্ত্রণ আর হারায়নি।",
+    ]
+
+    # 🎉 Close thriller
+    close_templates = [
+        f"কি অসাধারণ রোমাঞ্চকর ম্যাচ দেখলাম আমরা! শেষ মুহূর্ত পর্যন্ত উত্তেজনা ছিল তুঙ্গে, কিন্তু শেষ হাসি হাসলো {team}। মাত্র {margin} {type_bn} এই জয় সত্যিই স্মরণীয় হয়ে থাকবে।",
+
+        f"হৃদয় কাঁপানো লড়াইয়ের পর অবশেষে জয় পেল {team}! ম্যাচটা শেষ বল পর্যন্ত গড়িয়েছিল, আর শেষ মুহূর্তে {margin} {type_bn} ব্যবধানে জয় নিশ্চিত করে তারা।",
+
+        f"অবিশ্বাস্য সমাপ্তি! শেষ মুহূর্তে নাটকীয়ভাবে ম্যাচ জিতে নিল {team}, {margin} {type_bn} ব্যবধানে। এমন ম্যাচ ক্রিকেটপ্রেমীরা অনেকদিন মনে রাখবে।",
+    ]
+
+    # ⚡ Chase win (wickets)
+    chase_templates = [
+        f"টার্গেট তাড়া করে দুর্দান্ত জয়! {team} অসাধারণ ব্যাটিং করে {margin} {type_bn} জয় তুলে নিয়েছে। শুরুটা হয়তো কিছুটা সতর্ক ছিল, কিন্তু সময়ের সঙ্গে সঙ্গে তারা পুরো নিয়ন্ত্রণ নিয়ে নেয় এবং খুব আত্মবিশ্বাসের সঙ্গে ম্যাচ শেষ করে।",
+
+        f"চমৎকার রান চেজ! {team} দারুণভাবে লক্ষ্য ছুঁয়ে ফেলেছে এবং {margin} {type_bn} জয় পেয়েছে। শেষ দিকে তাদের ব্যাটিং ছিল একেবারে নিখুঁত, কোনো ভুল করেনি।",
+
+        f"দারুণভাবে লক্ষ্য তাড়া করে জয় পেল {team}! {margin} {type_bn} এই জয় এসেছে পরিপক্ক ব্যাটিং এবং সঠিক পরিকল্পনার মাধ্যমে।",
+    ]
+
+    # 🏆 Historic / special tone
+    special_templates = [
+        f"এই জয় শুধুমাত্র একটি জয় নয়, এটি একটি বার্তা! {team} {margin} {type_bn} ব্যবধানে ম্যাচ জিতে দেখিয়ে দিল তারা কতটা শক্তিশালী দল। পুরো ম্যাচ জুড়ে ছিল আত্মবিশ্বাস, নিয়ন্ত্রণ, এবং জয়ের তীব্র ইচ্ছা।",
+
+        f"স্মরণীয় এক জয়! {team} {margin} {type_bn} ব্যবধানে ম্যাচ জিতে আজকের দিনটিকে বিশেষ করে রাখলো। এমন পারফরম্যান্স দলটির জন্য অনেক বড় অনুপ্রেরণা হয়ে থাকবে।",
+    ]
+
+    # 🎲 Smart selection logic
+    if win_type == "runs" and margin >= 60:
+        return random.choice(dominant_templates + special_templates)
+
+    if win_type == "wickets" and margin >= 8:
+        return random.choice(dominant_templates)
+
+    if margin <= 2:
+        return random.choice(close_templates)
+
+    if win_type == "wickets" and margin >= 4:
+        return random.choice(chase_templates)
+
+    if margin >= 30:
+        return random.choice(dominant_templates)
+
+    # default balanced
     return random.choice(templates)
