@@ -1,0 +1,867 @@
+from playwright.sync_api import sync_playwright
+import re
+import json
+import time
+import random
+import asyncio
+import edge_tts
+import os
+import threading
+from queue import Queue
+from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary
+
+# ---------------------------------------
+# CONFIG
+# ---------------------------------------
+CREX_URL = "https://crex.com/scoreboard/119K/2FX/2nd-Match/14F/124/mal-vs-pnj-2nd-match-european-portugal-t10-2026/live"
+OUTPUT_FILE = "C:/cricket_voices/score.json"
+VOICE_FOLDER = "C:/cricket_voices/"
+VOICE = "bn-BD-NabanitaNeural"
+REFRESH_INTERVAL = 1  # seconds
+
+# ---------------------------------------
+# COMMENTARY
+# ---------------------------------------
+COMMENTARY2 = {
+    "DOT": ["ডট বল", "দারুণ বল, কোনো রান নেই"],
+    "SINGLE": ["এক রান নেওয়া হয়েছে"],
+    "DOUBLE": ["দুই রান সম্পন্ন"],
+    "TRIPLE": ["তিন রান নেওয়া হয়েছে"],
+    "FOUR": ["চার! অসাধারণ শট"],
+    "SIX": ["ছক্কা! বিশাল শট"],
+    "WICKET": ["আউট! বড় উইকেট পড়েছে"],
+    "OVER_COMPLETE": ["ওভার শেষ হয়েছে"],
+    "WELCOME": ["""যারা এখনই লাইভে যুক্ত হয়েছেন, আপনাদের সবাইকে স্বাগতম!
+
+আপনারা দেখছেন নিউজিল্যান্ড বনাম দক্ষিণ আফ্রিকার ম্যাচের লাইভ স্কোর আপডেট।
+আমরা দিচ্ছি বল বাই বল আপডেট এবং সম্পূর্ণ বাংলা ধারাভাষ্য।
+
+সঙ্গে থাকুন, সামনে আসছে আরও রোমাঞ্চকর মুহূর্ত!"""]
+}
+COMMENTARY = {
+
+    "DOT": [
+        "ডট বল, কোনো রান নেই।",
+        "চমৎকার ডেলিভারি, ব্যাটসম্যান রান নিতে পারলেন না।",
+        "দারুণ লাইন-লেন্থ, ব্যাটসম্যান চাপে।",
+        "বলটা ভালোভাবে সামলেছেন, কিন্তু রান নেই।",
+        "ডট বল, বোলারের দারুণ নিয়ন্ত্রণ দেখা যাচ্ছে।"
+    ],
+
+    "SINGLE": [
+        "এক রান নেওয়া হয়েছে।",
+        "সহজেই একটি রান সংগ্রহ করলেন।",
+        "স্ট্রাইক ঘুরিয়ে দিলেন, এক রান।",
+        "হালকা ট্যাপ করে একটি রান।",
+        "দৌড়ে একটি রান সম্পন্ন।"
+    ],
+
+    "DOUBLE": [
+        "দুই রান সম্পন্ন।",
+        "দারুণ দৌড়ে দুই রান নিলেন।",
+        "গ্যাপ খুঁজে বের করে দুই রান সংগ্রহ।",
+        "ফিল্ডারের ফাঁক দিয়ে দুই রান।",
+        "চমৎকার রানিং বিটুইন দ্য উইকেটস, দুই রান।"
+    ],
+
+    "TRIPLE": [
+        "তিন রান নেওয়া হয়েছে।",
+        "দারুণ দৌড়ে তিন রান সম্পন্ন।",
+        "বড় শট না হলেও তিন রান পেলেন।",
+        "ফিল্ডারদের ফাঁকি দিয়ে তিন রান।"
+    ],
+
+    "FOUR": [
+        "চার! অসাধারণ শট!",
+        "দারুণ টাইমিং, বল সোজা বাউন্ডারির বাইরে!",
+        "চমৎকার কভার ড্রাইভ, চার রান!",
+        "গ্যাপ খুঁজে নিয়েছেন, বল গড়িয়ে বাউন্ডারি!",
+        "এটা থামানো সম্ভব ছিল না—চার!"
+    ],
+
+    "SIX": [
+        "ছক্কা! বিশাল শট!",
+        "বলটা সরাসরি গ্যালারিতে!",
+        "কি দারুণ পাওয়ার, ছয় রান!",
+        "দর্শকরা উপভোগ করছেন, দুর্দান্ত ছক্কা!",
+        "একেবারে মাঠের বাইরে পাঠিয়ে দিলেন!"
+    ],
+
+    "WICKET": [
+        "আউট! বড় উইকেট পড়েছে!",
+        "বোলারের দারুণ সাফল্য, ব্যাটসম্যান ফিরে যাচ্ছেন।",
+        "ক্যাচ! এবং আউট!",
+        "এলবিডব্লিউ! আম্পায়ার আউট দিয়েছেন!",
+        "ম্যাচে বড় টার্নিং পয়েন্ট!"
+    ],
+
+    "OVER_COMPLETE": [
+        "ওভার শেষ হয়েছে।",
+        "এই ওভার শেষে কিছুটা চাপ তৈরি হয়েছে।",
+        "ওভার সমাপ্ত, এখন স্ট্র্যাটেজি বদলাতে পারে দল।",
+        "ভালো একটি ওভার শেষ করলেন বোলার।"
+    ],
+
+    "WIDE": [
+        "ওয়াইড বল, অতিরিক্ত এক রান।",
+        "লাইন মিস করেছেন, ওয়াইড।",
+        "খুব বাইরে বল, আম্পায়ারের ইশারা—ওয়াইড।"
+    ],
+
+    "NO_BALL": [
+        "নো বল! ফ্রি হিট আসছে।",
+        "ওভারস্টেপ করেছেন বোলার, নো বল।",
+        "এটা নো বল, ব্যাটসম্যান পেলেন সুযোগ।"
+    ],
+
+    "FREE_HIT": [
+        "এটি ফ্রি হিট!",
+        "ব্যাটসম্যানের জন্য বড় সুযোগ, ফ্রি হিট বল।",
+        "এই বলে আউট হওয়ার ভয় নেই, ফ্রি হিট।"
+    ],
+
+    "BYE": [
+        "বাই রান নেওয়া হয়েছে।",
+        "উইকেটকিপার মিস করেছেন, বাই রান।",
+        "ব্যাটে লাগেনি, কিন্তু রান এসেছে।"
+    ],
+
+    "LEG_BYE": [
+        "লেগ বাই, একটি রান।",
+        "পায়ে লেগে বল সরে গেছে, রান নেওয়া হয়েছে।",
+        "ব্যাটে লাগেনি, লেগ বাই হিসেবে গণনা।"
+    ],
+
+    "WELCOME": [
+        """নতুন যারা এখনই লাইভে যুক্ত হয়েছেন, আপনাদের স্বাগতম!
+
+দক্ষিণ আফ্রিকা তাদের ইনিংস শেষ করেছে ২০ ওভারে ৫ উইকেট হারিয়ে ১৬৪ রানে। 
+এখন নিউজিল্যান্ড ব্যাট করছে, তাদের জবাবী ইনিংস চলছে। 
+
+সাথে থাকুন, আমরা দেব বল বাই বল আপডেট এবং রোমাঞ্চকর মুহূর্তের সম্পূর্ণ বাংলা ধারাভাষ্য। 
+ম্যাচের উত্তেজনা এখনো তুঙ্গে, কোথাও যাবেন না!""",
+
+        """স্বাগতম ক্রিকেটপ্রেমীরা!
+
+দক্ষিণ আফ্রিকার ইনিংস শেষ হয়েছে ১৬৪/৫ তে, ২০ ওভারের পর। 
+এখন নিউজিল্যান্ড ব্যাট করছে, এবং প্রতিটি বলেই রয়েছে রোমাঞ্চ। 
+
+লাইভ স্কোর ও বাংলা ধারাভাষ্যের জন্য চোখ রাখুন আমাদের সঙ্গে!"""
+    ],
+
+    "MATCH_RESULT": [
+        "ম্যাচ শেষ! কি দারুণ লড়াই!",
+        "খেলা শেষ, এক অসাধারণ ম্যাচের সমাপ্তি!",
+        "শেষ পর্যন্ত দারুণ প্রতিদ্বন্দ্বিতা দেখলাম!",
+        "এই ম্যাচটি ক্রিকেটপ্রেমীদের মনে থাকবে দীর্ঘদিন!"
+    ]
+}
+
+# ---------------------------------------
+# STATE
+# ---------------------------------------
+last_runs = 100
+last_wickets = 2
+last_over = 4
+last_ball = 5
+welcome_played = False
+
+# ---------------------------------------
+# VOICE SYSTEM
+# ---------------------------------------
+voice_queue = Queue()
+
+def parse_winning_info(text):
+    """
+    Extract winning result from raw text
+    Example:
+    'RCB won by 6 wickets'
+    'India won by 25 runs'
+    """
+
+    text = text.lower()
+
+    result = {
+        "team": None,
+        "type": None,   # "wickets" or "runs"
+        "margin": None
+    }
+
+    # Pattern: Team won by X wickets/runs
+    match = re.search(r'([a-z\s]+?) won by (\d+) (wickets|runs)', text)
+
+    if match:
+        result["team"] = match.group(1).strip().title()
+        result["margin"] = int(match.group(2))
+        result["type"] = match.group(3)
+
+    return result
+
+
+def generate_continuous_commentary2(events, batsmen, runs, wickets, over):
+    parts = []
+
+    # Priority events
+    if "WICKET" in events:        
+        line = generate_wicket_commentary(runs, wickets, over, batsmen)
+        parts.append(line)
+
+    if "SIX" in events:
+        line = generate_event_commentary(events)    
+        parts.append(line)
+
+    elif "FOUR" in events:
+        parts.append(random.choice(COMMENTARY["FOUR"]))
+
+    elif "DOUBLE" in events:
+        parts.append(random.choice(COMMENTARY["DOUBLE"]))
+
+    elif "SINGLE" in events:
+        parts.append(random.choice(COMMENTARY["SINGLE"]))
+
+    elif "DOT" in events:
+        parts.append(random.choice(COMMENTARY["DOT"]))
+
+    if "WIDE" in events:
+        parts.append(random.choice(COMMENTARY["WIDE"]))
+
+    if "NO_BALL" in events:
+        parts.append(random.choice(COMMENTARY["NO_BALL"]))
+
+    # ---------------------------------------
+    # BATSMAN STATUS
+    # ---------------------------------------
+    if batsmen and len(batsmen) >= 2:
+        b1 = batsmen[0]
+        b2 = batsmen[1]
+
+        parts.append(
+            f"{b1['name']} খেলছেন {b1['runs']} রান, {b2['name']} করছেন {b2['runs']} রান।"
+        )
+
+    # ---------------------------------------
+    # OVER COMPLETE
+    # ---------------------------------------
+    if "OVER_COMPLETE" in events:
+        parts.append(
+            f"ওভার শেষ। স্কোর এখন {runs}-{wickets}, {over} ওভার শেষে।"
+        )
+
+    return " ".join(parts)
+
+def num_to_bn(n):
+    """Convert number to Bangla words for TTS-friendly commentary"""
+    # Simple example, can be extended
+    bn_digits = {
+        0: "শূন্য", 1: "এক", 2: "দুই", 3: "তিন", 4: "চার",
+        5: "পাঁচ", 6: "ছয়", 7: "সাত", 8: "আট", 9: "নয়", 10: "দশ"
+    }
+    if n in bn_digits:
+        return bn_digits[n]
+    return str(n)  # fallback
+    
+def generate_continuous_commentary2(events, batsmen, runs, wickets, over):
+    """
+    Generate a smooth, human-like cricket commentary for a sequence of events
+    - events: list of strings (SIX, FOUR, WICKET, DOUBLE, SINGLE, DOT, WIDE, NO_BALL, OVER_COMPLETE)
+    - batsmen: list of dicts [{'name':str,'runs':int}, ...]
+    - runs: total runs
+    - wickets: total wickets
+    - over: current over (float)
+    """
+
+    parts = []
+
+    # 1️⃣ WICKET has highest priority
+    if "WICKET" in events:
+        parts.append(generate_wicket_commentary(runs, wickets, over, batsmen[0]['name'] if batsmen else None))
+
+    # 2️⃣ Scoring events (SIX, FOUR, DOUBLE, SINGLE, DOT)
+    scoring_priority = ["SIX", "FOUR", "DOUBLE", "SINGLE", "DOT"]
+    for event in scoring_priority:
+        if event in events:
+            parts.append(generate_event_commentary([event]))
+            break  # Only one scoring commentary per ball
+
+    # 3️⃣ Extras
+    for extra in ["WIDE", "NO_BALL"]:
+        if extra in events:
+            parts.append(generate_event_commentary([extra]))
+
+    # 4️⃣ Batsman status
+    if batsmen and len(batsmen) >= 2:
+        b1 = batsmen[0]
+        b2 = batsmen[1]
+        parts.append(
+            f"{b1['name']} এখন {num_to_bn(b1['runs'])} রান করছে, {b2['name']} করছে {num_to_bn(b2['runs'])} রান।"
+        )
+    elif batsmen and len(batsmen) == 1:
+        b1 = batsmen[0]
+        parts.append(f"{b1['name']} এখন {num_to_bn(b1['runs'])} রান করছে।")
+
+    # 5️⃣ Over complete summary
+    if "OVER_COMPLETE" in events:
+        parts.append(
+            f"{num_to_bn(over)} ওভার শেষ। স্কোর এখন {num_to_bn(runs)} রান, {num_to_bn(wickets)} উইকেট।"
+        )
+
+    # Combine all commentary parts naturally
+    return " ".join(parts)
+
+import random
+
+def generate_continuous_commentary(events, batsmen, runs, wickets, over, team1=None, team2=None):
+    """
+    Generate a smooth, human-like cricket commentary for a sequence of events
+    - events: list of strings (SIX, FOUR, WICKET, DOUBLE, SINGLE, DOT, WIDE, NO_BALL, OVER_COMPLETE)
+    - batsmen: list of dicts [{'name':str,'runs':int}, ...]
+    - runs: total runs
+    - wickets: total wickets
+    - over: current over (float)
+    - team1, team2: optional team names for updates
+    """
+
+    parts = []
+
+    # 1️⃣ WICKET has highest priority
+    if "WICKET" in events:
+        parts.append(generate_wicket_commentary(runs, wickets, over, batsmen[0]['name'] if batsmen else None))
+
+    # 2️⃣ Scoring events (SIX, FOUR, DOUBLE, SINGLE, DOT)
+    scoring_priority = ["SIX", "FOUR", "DOUBLE", "SINGLE", "DOT"]
+    for event in scoring_priority:
+        if event in events:
+            parts.append(generate_event_commentary([event]))
+            break  # Only one scoring commentary per ball
+
+    # 3️⃣ Extras
+    for extra in ["WIDE", "NO_BALL"]:
+        if extra in events:
+            parts.append(generate_event_commentary([extra]))
+
+    # 4️⃣ Batsman status
+    if batsmen and len(batsmen) >= 2:
+        b1 = batsmen[0]
+        b2 = batsmen[1]
+        parts.append(
+            f"{b1['name']} এখন {num_to_bn(b1['runs'])} রান করছে, {b2['name']} করছে {num_to_bn(b2['runs'])} রান।"
+        )
+    elif batsmen and len(batsmen) == 1:
+        b1 = batsmen[0]
+        parts.append(f"{b1['name']} এখন {num_to_bn(b1['runs'])} রান করছে।")
+
+    # 5️⃣ Over complete summary
+    if "OVER_COMPLETE" in events:
+        over_comment = f"{num_to_bn(over)} ওভার শেষ। স্কোর এখন {num_to_bn(runs)} রান, {num_to_bn(wickets)} উইকেট।"
+        parts.append(over_comment)
+
+        # 6️⃣ Welcome message and quick update for new viewers
+        if team1 and team2:
+            welcome_msg = (
+                f"যারা নতুন যুক্ত হয়েছেন, স্বাগতম! "
+                f"এই সময় {team1} বনাম {team2} ম্যাচে স্কোর {num_to_bn(runs)} রানে {num_to_bn(wickets)} উইকেট। "
+                f"{over} ওভার শেষ হয়েছে, দলের সংগ্রহ ভালোভাবে এগুচ্ছে। ম্যাচে উত্তেজনা অব্যাহত!"
+            )
+            parts.append(welcome_msg)
+
+    # Combine all commentary parts naturally
+    return " ".join(parts)
+    
+def voice_worker():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    while True:
+        event, text, final, temp = voice_queue.get()
+
+        try:
+            # Generate temp file
+            loop.run_until_complete(generate_voice(text, temp))
+
+            # 🔁 Retry replace (Windows safe)
+            for i in range(5):
+                try:
+                    if os.path.exists(final):
+                        os.remove(final)  # remove old file first
+
+                    os.rename(temp, final)  # safer than replace
+                    break
+                except PermissionError:
+                    time.sleep(0.2)  # wait and retry
+                except Exception as e:
+                    print("Rename Error:", e)
+                    break
+
+        except Exception as e:
+            print("🔊 Voice Error:", e)
+
+        voice_queue.task_done()
+      
+
+threading.Thread(target=voice_worker, daemon=True).start()
+
+        
+async def generate_voice(text, path):
+    communicate = edge_tts.Communicate(text, VOICE)
+    await communicate.save(path)
+
+def speak(event, text):
+    print(f"🎙speak: {text}")
+    os.makedirs(VOICE_FOLDER, exist_ok=True)
+    final = os.path.join(VOICE_FOLDER, f"{event}.mp3")
+    temp = final + ".tmp"
+    voice_queue.put((event, text, final, temp))
+    print(f"🎙 {event}: {text}")
+
+# ---------------------------------------
+# PARSE SCORE (ROBUST)
+# ---------------------------------------
+
+def parse_score(text):
+    """
+    CREX format: '47-05.1'
+    Means: runs=47, wickets=0, over=5, ball=1
+    Pattern: {runs}-{wickets}{over}.{ball}
+    """
+    match = re.search(r'(\d+)-(\d)(\d+)\.([0-5])', text)
+    if not match:
+        return None
+
+    runs    = int(match.group(1))
+    wickets = int(match.group(2))  # single digit: 0-9
+    over    = int(match.group(3))  # remaining digits after wicket
+    ball    = int(match.group(4))  # decimal part, always 0-5
+
+    return runs, wickets, over, ball
+
+
+def clean_name(name):
+    """
+    Remove unwanted text before actual player name
+    """
+    # Keep only last 2–3 words (typical cricket name)
+    words = name.strip().split()
+    return " ".join(words[-2:])
+
+
+def parse_batsmen(text):
+    """
+    Extract exactly 2 batsmen (clean & accurate)
+    """
+
+    # Normalize
+    text = text.replace("\r", "").strip()
+
+    # 🔥 Remove unwanted UI text before parsing
+    remove_words = [
+        "Match info", "Live", "Scorecard",
+        "Commentary", "Over", "Projected Score"
+    ]
+
+    for word in remove_words:
+        text = text.replace(word, "")
+
+    # 👉 Core pattern (with + separator)
+    pattern = r'''
+        ([A-Z][a-zA-Z\s\.]+?)\s+
+        (\d+)\s+\((\d+)\)\s*
+        \+\s*
+        ([A-Z][a-zA-Z\s\.]+?)\s+
+        (\d+)\s+\((\d+)\)
+    '''
+
+    match = re.search(pattern, text, re.VERBOSE)
+
+    if match:
+        return [
+            {
+                "name": clean_name(match.group(1)),
+                "runs": int(match.group(2)),
+                "balls": int(match.group(3)),
+            },
+            {
+                "name": clean_name(match.group(4)),
+                "runs": int(match.group(5)),
+                "balls": int(match.group(6)),
+            }
+        ]
+
+    return []
+# ---------------------------------------
+# GET SCORE TEXT
+# ---------------------------------------
+def get_score_text(page):
+    """
+    Try multiple selectors to get full score (runs-wickets + overs)
+    """
+    selectors = [
+        "div[class*='innings'] span[class*='score']",  # main score element
+        "div[class*='score']",                         # fallback
+    ]
+    for sel in selectors:
+        try:
+            el = page.query_selector(sel)
+            if el:
+                text = el.inner_text().strip()
+                if text:
+                    return text
+        except:
+            continue
+    # final fallback
+    try:
+        return page.inner_text("body")
+    except:
+        return ""
+
+# ---------------------------------------
+# GET COMMENTARY
+# ---------------------------------------
+def get_commentary(page):
+    try:
+        el = page.query_selector("div[class*='commentary']")
+        if el:
+            return el.inner_text().lower()
+    except:
+        pass
+    return ""
+
+# ---------------------------------------
+# DETECT EVENT
+# ---------------------------------------
+
+  
+def detect_run(run_diff):
+    """
+    Return run-based event
+    """
+    if run_diff == 0:
+        return "DOT"
+    elif run_diff == 1:
+        return "SINGLE"
+    elif run_diff == 2:
+        return "DOUBLE"
+    elif run_diff == 3:
+        return "TRIPLE"
+    elif run_diff == 4:
+        return "FOUR"
+    elif run_diff >= 6:
+        return "SIX"
+    return None
+
+def detect_wicket_advanced(text):
+    if not text:
+        return None
+
+    t = text.lower()
+
+    if "caught out" in t or "c " in t:
+        return "CAUGHT"
+    if "lbw" in t:
+        return "LBW"
+    if "bowled" in t or "b " in t:
+        return "BOWLED"
+    if "stumped" in t or "st " in t:
+        return "STUMPED"
+    if "run out" in t:
+        return "RUN_OUT"
+    if "hit wicket" in t:
+        return "HIT_WICKET"
+    if "timed out" in t:
+        return "TIMED_OUT"
+    if "\nw\n" in t or " out" in t:
+        return "WICKET"
+
+    return None
+def detect_ball_status(runs, wickets, over, ball, commentary_text=""):
+    """
+    MULTI-EVENT DETECTOR (FIXED)
+
+    Returns:
+        list → ["DOUBLE", "OVER_COMPLETE"]
+    """
+    global last_runs, last_wickets, last_over, last_ball
+
+    # First call
+    if last_runs is None:
+        last_runs, last_wickets, last_over, last_ball = runs, wickets, over, ball
+        return []
+
+    run_diff = runs - last_runs
+    events = []
+
+    same_ball = (over == last_over and ball == last_ball)
+    new_ball = (over == last_over and ball != last_ball)
+    over_changed = (last_over is not None and over > last_over)
+
+    commentary_text = commentary_text.lower()
+
+    # ---------------------------------------
+    # ✅ EXTRAS FIRST (WIDE / NO BALL)
+    # ---------------------------------------
+    if same_ball and run_diff > 0:
+        if "No ball" in commentary_text:
+            events.append("NO_BALL")
+        else:
+            events.append("WIDE")
+            
+
+    # ---------------------------------------
+    # ✅ WICKET
+    # ---------------------------------------
+    if wickets > last_wickets:
+        detect_wicket_advanced(commentary_text)
+        events.append("WICKET")
+
+    # ---------------------------------------
+    # ✅ RUN EVENT (for real ball OR last ball of over)
+    # ---------------------------------------
+    
+    if runs > 0:
+        run_event = detect_run(runs)
+        if run_event:
+            # avoid duplicate if already wide/no ball
+            if run_event not in events:
+                events.append(run_event)
+
+    elif runs == 0 and new_ball:
+        events.append("DOT")
+
+    # ---------------------------------------
+    # ✅ OVER COMPLETE (ALWAYS ADD SEPARATELY)
+    # ---------------------------------------
+    if over_changed:
+        events.append("OVER_COMPLETE")
+
+    # ---------------------------------------
+    # UPDATE STATE
+    # ---------------------------------------
+    last_runs, last_wickets, last_over, last_ball = runs, wickets, over, ball
+
+    return events
+    
+def detect_event(runs, wickets, over, ball, commentary_text=""):
+    global last_runs, last_wickets, last_over, last_ball
+
+    if last_runs is None:
+        last_runs, last_wickets, last_over, last_ball = runs, wickets, over, ball
+        return []
+
+    events = []
+    text = commentary_text.lower()
+
+    run_diff = runs - last_runs
+    wicket_diff = wickets - last_wickets
+
+    same_ball = (over == last_over and ball == last_ball)
+    new_ball = not same_ball
+    over_changed = (last_over is not None and over > last_over)
+
+    # -----------------------------
+    # TEXT FLAGS
+    # -----------------------------
+    is_wide = "wide" in text
+    is_no_ball = "no ball" in text or "no-ball" in text
+
+    # -----------------------------
+    # 🟥 WICKET
+    # -----------------------------
+    if wicket_diff > 0:
+        events.append("WICKET")
+    
+    else:
+        # -----------------------------
+        # 🟡 EXTRAS (FIXED LOGIC)
+        # -----------------------------
+        if same_ball and run_diff > 0:
+
+            extra_type = None
+
+            # Priority 1: Text detection
+            if is_no_ball:
+                extra_type = "NO_BALL"
+            elif is_wide:
+                extra_type = "WIDE"
+
+            # Priority 2: Smart fallback (🔥 NEW)
+            elif run_diff >= 2:
+                # Assume at least 1 extra happened
+                extra_type = "WIDE"
+
+            if extra_type:
+                events.append(extra_type)
+                extra_runs = run_diff - 1
+            else:
+                extra_runs = run_diff
+
+            # Bat runs after extra
+            if extra_runs > 0:
+                run_event = detect_run(extra_runs)
+                if run_event:
+                    events.append(run_event)
+
+        # -----------------------------
+        # 🟢 NORMAL BALL
+        # -----------------------------
+        elif new_ball:
+            if run_diff > 0:
+                run_event = detect_run(run_diff)
+                if run_event:
+                    events.append(run_event)
+            else:
+                events.append("DOT")
+
+    # -----------------------------
+    # 🔵 OVER COMPLETE
+    # -----------------------------
+    if over_changed:
+        events.append("OVER_COMPLETE")
+
+    # remove duplicates
+    events = list(dict.fromkeys(events))
+
+    # update state
+    last_runs, last_wickets, last_over, last_ball = runs, wickets, over, ball
+
+    return events
+    
+
+    
+# ---------------------------------------
+# WRITE JSON
+# ---------------------------------------
+def write_json(runs, wickets, over, ball, event):
+    try:
+        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "runs": runs,
+                "wickets": wickets,
+                "over": over,
+                "ball": ball,
+                "event": event
+            }, f, indent=4)
+    except Exception as e:
+        print("JSON Error:", e)
+
+
+    
+def batsman_commentary(batsmen):
+    if len(batsmen) == 2:
+        b1, b2 = batsmen
+        return f"{b1['name']} {b1['runs']} রানে খেলছেন, আর {b2['name']} করেছেন {b2['runs']} রান।"
+# ---------------------------------------
+# MAIN LOOP
+# ---------------------------------------
+def main():
+    global welcome_played
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.goto(CREX_URL)
+        page.wait_for_load_state("domcontentloaded")
+        page.wait_for_timeout(2000)
+
+        print("🚀 SYSTEM STARTED...")
+
+        # ✅ Welcome (only once)
+        """if not welcome_played:
+            speak("WELCOME", random.choice(COMMENTARY["WELCOME"]))
+            welcome_played = True
+            time.sleep(2)"""
+
+        while True:
+            try:
+                # ---------------------------------------
+                # GET FULL PAGE TEXT
+                # ---------------------------------------
+                text = page.inner_text("body")
+                
+                # ---------------------------------------
+                # PARSE SCORE
+                # ---------------------------------------
+                score = parse_score(text)
+                print("PARSED:", score)
+                #print("text:", text)
+                
+                # Method 1: Line number
+                lines = text.splitlines()
+                last_status_message = lines[16]
+                print("Ball Status:", last_status_message)
+                
+                #for i, line in enumerate(lines, start=1):                    
+                #    print(f"'Event' found at line {i}: {line}")
+
+                # Method 2: Character index
+                #index = text.find("Caught Out")
+                #print(f"'Caught Out' starts at character index: {index}")
+                if not score:
+                    time.sleep(REFRESH_INTERVAL)                    
+                    info = parse_winning_info(last_status_message)
+
+                    line = generate_winning_commentary(
+                        info["team"],
+                        info["margin"],
+                        info["type"]
+                    )
+
+                    print(line)
+                    continue
+               
+                runs, wickets, over, ball = score
+
+                # ---------------------------------------
+                # PARSE BATSMEN
+                # ---------------------------------------
+                batsmen = parse_batsmen(text)
+
+                # Debug
+                """for b in batsmen:
+                    print("Batsman:", b)"""
+
+                # ---------------------------------------
+                # DETECT EVENTS
+                # ---------------------------------------
+                events = detect_event(runs, wickets, over, ball, last_status_message)
+               
+                if not events:
+                    time.sleep(REFRESH_INTERVAL)
+                    continue
+
+                print("EVENTS:", events)
+
+                # ---------------------------------------
+                # GENERATE NATURAL COMMENTARY
+                # ---------------------------------------
+                line = generate_continuous_commentary(
+                    events,
+                    batsmen,
+                    runs,
+                    wickets,
+                    over
+                )
+                #print("🎙 FINAL:", line)
+                # ---------------------------------------
+                # OUTPUT
+                # ---------------------------------------
+                if line:
+                    print("🎙 FINAL:", line)
+
+                    # Save last main event
+                    write_json(runs, wickets, over, ball, events[0])
+                    print(events[0])
+                    # Speak once (IMPORTANT FIX ✅)
+                    speak(events[0], line)
+
+            except Exception as e:
+                print("MAIN ERROR:", e)
+
+            time.sleep(REFRESH_INTERVAL)
+
+# ---------------------------------------
+if __name__ == "__main__":
+    main() 
+    
+    
+    
+    
