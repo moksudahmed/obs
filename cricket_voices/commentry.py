@@ -278,7 +278,7 @@ def generate_event_commentary(events, context=None):
         context: dict containing match context (team, decision, players, etc.)
     """
     parts = []
-    
+   
     # Check for toss and team selection events first
     toss_events = ["TOSS_WIN_BAT", "TOSS_WIN_BOWL", "TOSS_LOSS", "PLAYING_XI", "IMPACT_PLAYER"]
     
