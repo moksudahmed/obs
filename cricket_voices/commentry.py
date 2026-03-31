@@ -1,5 +1,5 @@
 import random
-
+from commentry_dic import COMMENTARY
 # -----------------------------
 # Number → Bangla Words
 # -----------------------------
@@ -19,62 +19,8 @@ def num_to_bn(n):
 # -----------------------------
 # MAIN FUNCTION
 # -----------------------------
-import random
 
-COMMENTARY = {
-    "SIX": [
-        "ওহ, বলটি বাউন্ডারির বাইর! ছক্কা! ব্যাটসম্যান দারুণ timing দেখিয়েছে।",
-        "দর্শকরা উচ্ছ্বাসে, এটা ছিল একটি বিশাল ছয়! ব্যাটিং অনবদ্য।",
-        "ধাতব্য শট! বলটি লং অফের বাইর চলে গেল। ছক্কা!",
-        "একেবারেই চমকপ্রদ! ব্যাটসম্যান বলটিকে আকাশে ছুঁড়ে দিল, ছক্কা।",
-        "অসাধারণ! মাঠ ভরপুর হয়ে উঠলো এই বিশাল ছক্কার জন্য।"
-    ],
-    "FOUR": [
-        "ফিল্ডাররা চেষ্টা করলেও ব্যর্থ, চার রান! ব্যাটসম্যান চমৎকার শট খেলেছে।",
-        "বল পয়সার মতো বাউন্ডারিতে গিয়ে থামলো, চার রান!",
-        "দারুণ timing! ব্যাট থেকে বল চলে গেল বাউন্ডারিতে, চার।",
-        "মধ্যম মাঠের ফিল্ডাররা বল ধরতে পারলেন না, চার রান!",
-        "ফিল্ডারদের ছুটে দৌড়ানোই যথেষ্ট হয়নি, বল বাউন্ডারি ছুঁলো।"
-    ],
-    "DOUBLE": [
-        "দুটি রান! ব্যাটসম্যান চতুরভাবে বল চালাল এবং দু'পদে নিরাপদে পৌঁছালো।",
-        "দারুণ জগিং, ব্যাটসম্যান স্কোর যোগ করল দুটি রান।",
-        "ফিল্ডারদের চেষ্টার মাঝেও দু'টি রান নিরাপদে যোগ হলো।",
-        "দুটি সুন্দর রান! ব্যাটসম্যান smart খেলেছে।",
-        "দুই পা, দুই রান! ব্যাটসম্যান দ্রুত রান তুলেছে।"
-    ],
-    "SINGLE": [
-        "একটি রান যোগ হলো। ব্যাটসম্যান সতর্কভাবে বল খেলেছে।",
-        "চুপচাপ একটি রান! ফিল্ডাররা বলটি দ্রুত ফেরত দিল।",
-        "একটি নিরাপদ রান। ব্যাটসম্যান দায়িত্বশীল খেলছে।",
-        "একটি সহজ রান। ফিল্ডারদের চেষ্টার মধ্যেও ব্যাটসম্যান এগিয়ে গেল।",
-        "একটি সুন্দর শট এবং একটি রান! স্কোর বৃদ্ধি পাচ্ছে।"
-    ],
-    "DOT": [
-        "কোনও রান হয়নি। বলটি নিয়ন্ত্রিতভাবে খেলেছে ব্যাটসম্যান।",
-        "ডট বল! ব্যাটসম্যান সুযোগ নিতে পারল না।",
-        "ফিল্ডাররা আনন্দিত, রান হয়নি।",
-        "এই ওভারেও একটি রানের জন্য চাপ তৈরি করা হলো ব্যাটসম্যানের ওপর।",
-        "ডট বল! ব্যাটসম্যানকে আরও আগ্রাসী হতে হবে।"
-    ],
-    "WIDE": [
-        "ওহ, ওভারসের অসাবধানতা! ওয়াইড বল, এক রান যোগ হলো।",
-        "উইকেটের বিপদ বাড়লো না, ওয়াইড বল! একটি রান স্কোরে।",
-        "ফিল্ডারদের আরাম, কিন্তু ওয়াইড বল দিয়ে রান এসেছে।",
-        "ওভার নিয়ন্ত্রণ ব্যর্থ, ওয়াইড! স্কোরে যোগ হলো।",
-        "বোলারের অসাবধানতা! ওয়াইড বল, রান বাড়ছে।"
-    ],
-    "NO_BALL": [
-        "নো-বল! ব্যাটসম্যানকে এটি free-shot হিসেবে নিতে হবে।",
-        "ওহ, বোলার ভুলে গেল, নো-বল! ব্যাটসম্যান সুবিধা নিতে পারে।",
-        "নো-বল! অতিরিক্ত একটি রান যোগ হলো।",
-        "এই ওভারে অসুবিধা, নো-বল! ব্যাটসম্যান অপেক্ষা করছে বড় শটের জন্য।",
-        "নো-বল ঘোষণা হলো, ব্যাটসম্যান সুবিধা নিচ্ছে।"
-    ]
-}
-
-
-def generate_event_commentary(events):
+def generate_event_commentary2(events):
     """
     Generate rich, natural Bangla commentary for a given list of cricket events
     events: list of strings (SIX, FOUR, DOUBLE, SINGLE, DOT, WIDE, NO_BALL)
@@ -104,53 +50,27 @@ def generate_event_commentary(events):
     commentary_text = " ".join(parts)
     return commentary_text
     
-    
-def generate_wicket_commentary2(runs, wickets, over, batsman=None):
-    """
-    Smart Bangla wicket commentary
-    - Avoids symbols like '/'
-    - Converts numbers to words
-    - More natural speech flow
-    """
 
-    runs_bn = num_to_bn(runs)
-    wickets_bn = num_to_bn(wickets)
-    over_bn = str(over)  # keep decimal natural (TTS reads better)
+def get_match_situation(current_score, target, wickets_left, balls_left, is_batting_first):
+    """Generate match situation commentary based on current match state"""
+    if not is_batting_first:
+        runs_needed = target - current_score
+        overs_left = balls_left / 6
+        required_rr = runs_needed / overs_left if overs_left > 0 else 0
+        
+        if runs_needed <= 0:
+            return {"type": "TEAM_WON", "data": {}}
+        elif required_rr <= 6:
+            return {"type": "CHASING_EASY", "data": {"remaining": runs_needed, "wickets": wickets_left}}
+        elif required_rr <= 10:
+            return {"type": "CHASING_TENSE", "data": {"required_rr": round(required_rr, 2)}}
+        else:
+            return {"type": "CHASING_TOUGH", "data": {"required": runs_needed, "balls": balls_left}}
+    else:
+        runs_to_defend = target - current_score
+        # Defending logic
+        return {"type": "DEFENDING_TENSE", "data": {"runs_to_defend": runs_to_defend, "wickets": wickets_left}}
 
-    name_part = f"{batsman} ফিরে যাচ্ছেন। " if batsman else ""
-
-    # 🎯 Normal commentary
-    templates = [
-        f"আউট! {name_part}দলের রান এখন {runs_bn}, উইকেট {wickets_bn}টি, {over_bn} ওভারে বড় ধাক্কা।",
-        f"উইকেট পড়ে গেছে! {name_part}{over_bn} ওভারে দল করেছে {runs_bn} রান, হারিয়েছে {wickets_bn} উইকেট।",
-        f"এবং আউট! {name_part}স্কোর এখন {runs_bn} রান, {wickets_bn} উইকেট, ম্যাচে নতুন মোড়।",
-        f"বড় উইকেট! {name_part}{runs_bn} রানে {wickets_bn} উইকেট, চাপ বাড়ছে।",
-        f"উইকেট! {name_part}এই মুহূর্তে দলের সংগ্রহ {runs_bn} রান, {wickets_bn} উইকেট।",
-    ]
-
-    # 🔥 Pressure situation
-    pressure_templates = [
-        f"বড় ধাক্কা! {name_part}{runs_bn} রানে {wickets_bn} উইকেট, দল কিছুটা চাপে।",
-        f"গুরুত্বপূর্ণ উইকেট! {name_part}{over_bn} ওভারে {runs_bn} রান, {wickets_bn} উইকেট — ম্যাচ জমে উঠছে।",
-        f"এই উইকেট ম্যাচের মোড় ঘুরিয়ে দিতে পারে! {runs_bn} রান, {wickets_bn} উইকেট।",
-    ]
-
-    # 🚨 Collapse situation
-    collapse_templates = [
-        f"একের পর এক উইকেট! {runs_bn} রানে {wickets_bn} উইকেট, দল বিপদে।",
-        f"ব্যাটিং ধস! {runs_bn} রান, {wickets_bn} উইকেট — পরিস্থিতি কঠিন হয়ে যাচ্ছে।",
-        f"চাপ বাড়ছেই! {runs_bn} রানে {wickets_bn} উইকেট পড়ে গেছে।",
-    ]
-
-    # 🎲 Smart selection logic
-    if wickets >= 6:
-        return random.choice(collapse_templates)
-
-    if wickets >= 4 and random.random() > 0.5:
-        return random.choice(pressure_templates)
-
-    return random.choice(templates)
-    
 def generate_wicket_commentary(runs, wickets, over, batsman=None):
     """
     Long, natural Bangla wicket commentary
@@ -343,3 +263,216 @@ def generate_winning_commentary(team, margin, win_type):
 
     # default balanced
     return random.choice(templates)
+
+def generate_event_commentary(events, context=None):
+    """
+    Generate rich, natural Bangla commentary for cricket events
+    
+    Args:
+        events: list of strings (SIX, FOUR, DOUBLE, SINGLE, DOT, WIDE, NO_BALL, 
+                               WICKET, BOWLED, CATCH, BATTER_INJURED, BATTER_RETURNS,
+                               RETIRE_HURT, TIME_OUT, DRINKS_BREAK, REVIEW_TAKEN,
+                               REVIEW_LOST, REVIEW_SUCCESSFUL, POWERPLAY, STRATEGIC_TIMEOUT,
+                               RAIN_DELAY, TOSS_WIN_BAT, TOSS_WIN_BOWL, TOSS_LOSS,
+                               PLAYING_XI, IMPACT_PLAYER)
+        context: dict containing match context (team, decision, players, etc.)
+    """
+    parts = []
+    
+    # Check for toss and team selection events first
+    toss_events = ["TOSS_WIN_BAT", "TOSS_WIN_BOWL", "TOSS_LOSS", "PLAYING_XI", "IMPACT_PLAYER"]
+    
+    for event in events:
+        if event in toss_events and event in COMMENTARY:
+            if context and 'team' in context:
+                commentary_text = random.choice(COMMENTARY[event])
+                if '{team}' in commentary_text:
+                    commentary_text = commentary_text.format(team=context['team'])
+                if '{decision}' in commentary_text:
+                    commentary_text = commentary_text.format(decision=context.get('decision', 'ব্যাটিং'))
+                if '{players}' in commentary_text:
+                    commentary_text = commentary_text.format(players=context.get('players', 'নতুন মুখ'))
+                if '{changes}' in commentary_text:
+                    commentary_text = commentary_text.format(changes=context.get('changes', 'কেউ নেই'))
+                if '{player}' in commentary_text:
+                    commentary_text = commentary_text.format(player=context.get('player', 'নতুন খেলোয়াড়'))
+                if '{key_players}' in commentary_text:
+                    commentary_text = commentary_text.format(key_players=context.get('key_players', 'অভিজ্ঞ খেলোয়াড়রা'))
+                if '{bowlers}' in commentary_text:
+                    commentary_text = commentary_text.format(bowlers=context.get('bowlers', 'মূল বোলাররা'))
+                if '{surprise_player}' in commentary_text:
+                    commentary_text = commentary_text.format(surprise_player=context.get('surprise_player', 'চমকের নাম'))
+                parts.append(commentary_text)
+            else:
+                parts.append(random.choice(COMMENTARY[event]))
+    
+    # Check for special event types
+    special_events = ["BATTER_INJURED", "BATTER_RETURNS", "RETIRE_HURT", "TIME_OUT", 
+                      "DRINKS_BREAK", "REVIEW_TAKEN", "REVIEW_LOST", "REVIEW_SUCCESSFUL",
+                      "POWERPLAY", "STRATEGIC_TIMEOUT", "RAIN_DELAY"]
+    
+    for event in events:
+        if event in special_events and event in COMMENTARY:
+            parts.append(random.choice(COMMENTARY[event]))
+    
+    # Primary scoring events (only one of these per ball)
+    scoring_events = ["BOWLED", "CATCH", "WICKET", "SIX", "FOUR", "DOUBLE", "SINGLE", "DOT"]
+    for event in scoring_events:
+        if event in events and event in COMMENTARY:
+            parts.append(random.choice(COMMENTARY[event]))
+            break  # Only add one scoring event per ball
+    
+    # Extras can be combined with scoring
+    extras = ["WIDE", "NO_BALL"]
+    for extra in extras:
+        if extra in events and extra in COMMENTARY:
+            parts.append(random.choice(COMMENTARY[extra]))
+    
+    # Add milestone commentary if provided
+    if context and 'milestone' in context:
+        milestone_type = context['milestone']
+        if milestone_type in COMMENTARY["MILESTONE"]:
+            parts.append(COMMENTARY["MILESTONE"][milestone_type])
+    
+    # Add over summary if provided
+    if context and 'over_info' in context:
+        over_info = context['over_info']
+        summary = random.choice(COMMENTARY["OVER_SUMMARY"])
+        summary = summary.format(runs=over_info.get('runs', 0), wickets=over_info.get('wickets', 0))
+        parts.append("\n" + summary)
+    
+    # Add match situation if provided
+    if context and 'match_situation' in context:
+        situation_type = context['match_situation']['type']
+        situation_data = context['match_situation']['data']
+        if situation_type in COMMENTARY["MATCH_SITUATION"]:
+            situation = COMMENTARY["MATCH_SITUATION"][situation_type].format(**situation_data)
+            parts.append("\n" + situation)
+    
+    # Combine all parts
+    commentary_text = " ".join(parts)
+    return commentary_text
+
+
+def generate_toss_commentary(team, decision, is_win=True):
+    """
+    Generate commentary for toss and team selection
+    
+    Args:
+        team: Team name (e.g., "LSG", "MI", "CSK")
+        decision: "bat" or "bowl"
+        is_win: True if team won the toss, False if lost
+    """
+    events = []
+    context = {'team': team}
+    
+    if is_win:
+        if decision == "bat":
+            events.append("TOSS_WIN_BAT")
+            context['decision'] = "ব্যাটিং"
+        else:
+            events.append("TOSS_WIN_BOWL")
+            context['decision'] = "বোলিং"
+    else:
+        events.append("TOSS_LOSS")
+        if decision == "bat":
+            context['decision'] = "ব্যাটিং"
+        else:
+            context['decision'] = "বোলিং"
+    
+    return generate_event_commentary(events, context)
+
+
+def generate_playing_xi_commentary(team, players_list=None, changes=None, key_players=None):
+    """
+    Generate commentary for playing XI announcement
+    
+    Args:
+        team: Team name
+        players_list: List of players in the XI
+        changes: Changes from previous match
+        key_players: Key players to highlight
+    """
+    events = ["PLAYING_XI"]
+    context = {
+        'team': team,
+        'players': players_list if players_list else ["নতুন মুখ"],
+        'changes': changes if changes else "কেউ নেই",
+        'key_players': key_players if key_players else ["অভিজ্ঞ খেলোয়াড়রা"]
+    }
+    
+    return generate_event_commentary(events, context)
+
+
+def generate_impact_player_commentary(team, player, reason=None):
+    """
+    Generate commentary for impact player announcement
+    
+    Args:
+        team: Team name
+        player: Impact player name
+        reason: Reason for bringing impact player
+    """
+    events = ["IMPACT_PLAYER"]
+    context = {
+        'team': team,
+        'player': player
+    }
+    
+    return generate_event_commentary(events, context)
+
+
+# Example usage with LSG opt to bat scenario
+def demonstrate_toss_scenarios():
+    """Demonstrate toss and team selection scenarios"""
+    
+    print("="*80)
+    print("TOSS AND TEAM SELECTION COMMENTARY DEMONSTRATION")
+    print("="*80)
+    
+    # Scenario 1: LSG wins toss and opts to bat
+    print("\n1. LSG WINS TOSS AND OPTS TO BAT:")
+    commentary = generate_toss_commentary("LSG", "bat", is_win=True)
+    print(f"   {commentary}")
+    
+    # Scenario 2: LSG wins toss and opts to bowl
+    print("\n2. LSG WINS TOSS AND OPTS TO BOWL:")
+    commentary = generate_toss_commentary("LSG", "bowl", is_win=True)
+    print(f"   {commentary}")
+    
+    # Scenario 3: LSG loses toss, opponent chooses to bat
+    print("\n3. LSG LOSES TOSS, OPPONENT CHOOSES TO BAT:")
+    commentary = generate_toss_commentary("LSG", "bat", is_win=False)
+    print(f"   {commentary}")
+    
+    # Scenario 4: Playing XI announcement
+    print("\n4. PLAYING XI ANNOUNCEMENT:")
+    commentary = generate_playing_xi_commentary(
+        team="LSG",
+        players_list="রাহুল, মায়ার্স, স্টইনিস, পুরাণ, বদৌনি, ক্রুনাল, মোহসীন, অভিষেক, রবি, বিশ্নোই, আভেশ",
+        changes="ফিরেছেন মায়ার্স, বাদ পড়েছেন ডি কক",
+        key_players="রাহুল ও স্টইনিস"
+    )
+    print(f"   {commentary}")
+    
+    # Scenario 5: Impact player introduction
+    print("\n5. IMPACT PLAYER INTRODUCTION:")
+    commentary = generate_impact_player_commentary(
+        team="LSG",
+        player="অ্যাঞ্জেলো ম্যাথিউজ",
+        reason="বোলিং আক্রমণে বৈচিত্র্য আনতে"
+    )
+    print(f"   {commentary}")
+    
+    # Scenario 6: Complete match start scenario
+    print("\n6. COMPLETE MATCH START SCENARIO (LSG opts to bat):")
+    toss_commentary = generate_toss_commentary("LSG", "bat", is_win=True)
+    xi_commentary = generate_playing_xi_commentary(
+        team="LSG",
+        players_list="কে এল রাহুল (অধিনায়ক), কাইল মায়ার্স, মার্কাস স্টইনিস, নিকোলাস পুরাণ (উইকেটরক্ষক), আয়ুশ বদৌনি, ক্রুনাল পাণ্ড্য, মোহসীন খান, অভিষেক শর্মা, রবি বিষ্ণোই, যশ ঠাকুর, আভেশ খান",
+        changes="মায়ার্স ফিরেছেন ইনজুরি থেকে, আভেশ খান পেস আক্রমণে"
+    )
+    
+    print(f"   TOSS: {toss_commentary}")
+    print(f"   TEAM: {xi_commentary}")
+    print("\n   এবং ম্যাচ শুরু হতে যাচ্ছে... উত্তেজনা চরমে!")
