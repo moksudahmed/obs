@@ -8,12 +8,12 @@ import edge_tts
 import os
 import threading
 from queue import Queue
-from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary
+from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary, generate_toss_commentary
 from voice import speak
 # ---------------------------------------
 # CONFIG
 # ---------------------------------------
-CREX_URL = "https://crex.com/cricket-live-score/csk-vs-rr-3rd-match-indian-premier-league-2026-match-updates-10Y1"
+CREX_URL = "https://crex.com/cricket-live-score/lsg-vs-mal-6th-match-european-portugal-t10-2026-match-updates-119O"
 OUTPUT_FILE = "C:/cricket_voices/score.json"
 
 REFRESH_INTERVAL = 1  # seconds
@@ -21,22 +21,7 @@ REFRESH_INTERVAL = 1  # seconds
 # ---------------------------------------
 # COMMENTARY
 # ---------------------------------------
-COMMENTARY2 = {
-    "DOT": ["ডট বল", "দারুণ বল, কোনো রান নেই"],
-    "SINGLE": ["এক রান নেওয়া হয়েছে"],
-    "DOUBLE": ["দুই রান সম্পন্ন"],
-    "TRIPLE": ["তিন রান নেওয়া হয়েছে"],
-    "FOUR": ["চার! অসাধারণ শট"],
-    "SIX": ["ছক্কা! বিশাল শট"],
-    "WICKET": ["আউট! বড় উইকেট পড়েছে"],
-    "OVER_COMPLETE": ["ওভার শেষ হয়েছে"],
-    "WELCOME": ["""যারা এখনই লাইভে যুক্ত হয়েছেন, আপনাদের সবাইকে স্বাগতম!
 
-আপনারা দেখছেন নিউজিল্যান্ড বনাম দক্ষিণ আফ্রিকার ম্যাচের লাইভ স্কোর আপডেট।
-আমরা দিচ্ছি বল বাই বল আপডেট এবং সম্পূর্ণ বাংলা ধারাভাষ্য।
-
-সঙ্গে থাকুন, সামনে আসছে আরও রোমাঞ্চকর মুহূর্ত!"""]
-}
 COMMENTARY = {
 
     "DOT": [
@@ -347,8 +332,8 @@ def generate_continuous_commentary(events, batsmen, runs, wickets, over, team1=N
     # 2️⃣ Scoring events (SIX, FOUR, DOUBLE, SINGLE, DOT)
     scoring_priority = ["SIX", "FOUR", "DOUBLE", "SINGLE", "DOT"]
     for event in scoring_priority:
-        if event in events:
-            parts.append(generate_event_commentary([event]))
+        if event in events:        
+            parts.append(generate_event_commentary([event]))            
             break  # Only one scoring commentary per ball
 
     # 3️⃣ Extras
@@ -791,14 +776,16 @@ def main():
                 batsmen = parse_batsmen(text)
 
                 # Debug
-                for b in batsmen:
-                    print("Batsman:", b)
+                """for b in batsmen:
+                    print("Batsman:", b)"""
 
                 # ---------------------------------------
                 # DETECT EVENTS
                 # ---------------------------------------
-                events = detect_event(runs, wickets, over, ball, last_status_message)
-                
+                events = detect_event(runs, wickets, over, ball, last_status_message)                
+                commentary = generate_toss_commentary("LSG", "bat", is_win=True)
+                print(commentary)
+                print(msg)
                 if not events:
                     time.sleep(REFRESH_INTERVAL)
                     continue
