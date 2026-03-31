@@ -312,7 +312,7 @@ def generate_continuous_commentary2(events, batsmen, runs, wickets, over):
 
 import random
 
-def generate_continuous_commentary(events, batsmen, runs, wickets, over, team1=None, team2=None):
+def generate_continuous_commentary(events, batsmen, runs, wickets, over, team1=None, team2=None, context=None):
     """
     Generate a smooth, human-like cricket commentary for a sequence of events
     - events: list of strings (SIX, FOUR, WICKET, DOUBLE, SINGLE, DOT, WIDE, NO_BALL, OVER_COMPLETE)
@@ -745,9 +745,7 @@ def main():
                 #print("text:", text)
                 
                 # Method 1: Line number
-                lines = text.splitlines()
-                last_status_message = lines[16]
-                print("Ball Status:", last_status_message)
+                
                 
                 #for i, line in enumerate(lines, start=1):                    
                 #    print(f"'Event' found at line {i}: {line}")
@@ -755,6 +753,7 @@ def main():
                 # Method 2: Character index
                 #index = text.find("Caught Out")
                 #print(f"'Caught Out' starts at character index: {index}")
+                last_status_message=""
                 if not score:
                     time.sleep(REFRESH_INTERVAL)                    
                     info = parse_winning_info(last_status_message)
@@ -769,7 +768,14 @@ def main():
                     continue
                
                 runs, wickets, over, ball = score
-
+                
+                lines = text.splitlines()
+                if runs <10:
+                    last_status_message = lines[18]
+                else:
+                    last_status_message = lines[17]
+                last_status_message = lines[16]
+                print("Status", last_status_message)
                 # ---------------------------------------
                 # PARSE BATSMEN
                 # ---------------------------------------
@@ -783,9 +789,9 @@ def main():
                 # DETECT EVENTS
                 # ---------------------------------------
                 events = detect_event(runs, wickets, over, ball, last_status_message)                
-                commentary = generate_toss_commentary("LSG", "bat", is_win=True)
-                print(commentary)
-                print(msg)
+                #commentary = generate_toss_commentary("LSG", "bat", is_win=True)
+                #print(commentary)
+                
                 if not events:
                     time.sleep(REFRESH_INTERVAL)
                     continue
@@ -800,7 +806,10 @@ def main():
                     batsmen,
                     runs,
                     wickets,
-                    over
+                    over,
+                    "A",
+                    "B",
+                    last_status_message
                 )
                 #print("🎙 FINAL:", line)
                 # ---------------------------------------
