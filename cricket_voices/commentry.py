@@ -382,7 +382,40 @@ def generate_toss_commentary(team, decision, is_win=True):
     
     return generate_event_commentary(events, context)
 
+import re
 
+def pre_game_scenario_commentary(text: str) -> str:
+    if not text:
+        return "এই মুহূর্তে ম্যাচ সংক্রান্ত কোনো আপডেট পাওয়া যাচ্ছে না।"
+
+    text_lower = text.lower()
+
+    # Delay scenarios
+    if "delayed" in text_lower:
+        if "rain" in text_lower:
+            return "বৃষ্টি বাধায় ম্যাচ শুরুতে দেরি হচ্ছে, সবাই অপেক্ষায় আছেন খেলা শুরুর জন্য।"
+        elif "wet" in text_lower:
+            return "আউটফিল্ড ভেজা থাকার কারণে ম্যাচ শুরুতে দেরি হচ্ছে। মাঠ প্রস্তুত হলেই খেলা শুরু হবে।"
+        else:
+            return "কিছু অনির্দিষ্ট কারণে টস দেরিতে হচ্ছে, আপডেটের জন্য সাথে থাকুন।"
+
+    # Toss auto-detect (e.g., "CNQ-W opt to Bat")
+    toss_match = re.search(r'([A-Za-z\-]+)\s+opt to\s+(bat|bowl)', text, re.IGNORECASE)
+    if toss_match:
+        team = toss_match.group(1)
+        decision = toss_match.group(2).lower()
+
+        if decision == "bat":
+            return f"টস জিতে {team} ব্যাটিং করার সিদ্ধান্ত নিয়েছে। আজ তারা শুরুটা করতে চায় শক্তভাবে!"
+        else:
+            return f"টস জিতে {team} বোলিং করার সিদ্ধান্ত নিয়েছে। শুরুতেই প্রতিপক্ষকে চাপে ফেলতে চাইবে তারা।"
+
+    # Players entering
+    if "entering" in text_lower or "players" in text_lower:
+        return "খেলোয়াড়রা এখন মাঠে প্রবেশ করছেন, আর কিছুক্ষণের মধ্যেই ম্যাচ শুরু হতে যাচ্ছে!"
+
+    return "ম্যাচের বর্তমান অবস্থা সম্পর্কে পরিষ্কার কোনো তথ্য পাওয়া যায়নি।"
+    
 def generate_playing_xi_commentary(team, players_list=None, changes=None, key_players=None):
     """
     Generate commentary for playing XI announcement
