@@ -8,12 +8,12 @@ import edge_tts
 import os
 import threading
 from queue import Queue
-from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary, generate_toss_commentary
+from commentry import generate_wicket_commentary, generate_winning_commentary, generate_event_commentary,generate_toss_commentary, demonstrate_toss_scenarios, pre_game_scenario_commentary
 from voice import speak
 # ---------------------------------------
 # CONFIG
 # ---------------------------------------
-CREX_URL = "https://crex.com/cricket-live-score/lsg-vs-mal-6th-match-european-portugal-t10-2026-match-updates-119O"
+CREX_URL = "https://crex.com/cricket-live-score/cnq-w-vs-strk-w-8th-match-national-womens-t20-tournament-2026-match-updates-117S"
 OUTPUT_FILE = "C:/cricket_voices/score.json"
 
 REFRESH_INTERVAL = 1  # seconds
@@ -708,6 +708,8 @@ def batsman_commentary(batsmen):
     if len(batsmen) == 2:
         b1, b2 = batsmen
         return f"{b1['name']} {b1['runs']} রানে খেলছেন, আর {b2['name']} করেছেন {b2['runs']} রান।"
+
+
 # ---------------------------------------
 # MAIN LOOP
 # ---------------------------------------
@@ -723,10 +725,12 @@ def main():
         page.wait_for_timeout(2000)
 
         print("🚀 SYSTEM STARTED...")
-
+        line = ""
+        event="WELCOME"
         # ✅ Welcome (only once)
         """if not welcome_played:
-            speak("WELCOME", random.choice(COMMENTARY["WELCOME"]))
+            line = random.choice(COMMENTARY["WELCOME"])
+            speak(event, line)
             welcome_played = True
             time.sleep(2)"""
 
@@ -746,7 +750,19 @@ def main():
                 
                 # Method 1: Line number
                 
+                lines = text.splitlines()
+                """if runs <10:
+                    last_status_message = lines[18]
+                else:
+                    last_status_message = lines[17]
+                if run ==0:
+                    print("HELLO")"""                    
                 
+                #print(lines[16].find("Toss"))
+                
+                #last_status_message = lines[16]
+                #$print("Status", last_status_message)
+                #demonstrate_toss_scenarios()
                 #for i, line in enumerate(lines, start=1):                    
                 #    print(f"'Event' found at line {i}: {line}")
 
@@ -763,54 +779,60 @@ def main():
                         info["margin"],
                         info["type"]
                     )
-                    speak("WELCOME", line)
+                    speak(event, line)
                     print(line)
                     continue
                
                 runs, wickets, over, ball = score
                 
-                lines = text.splitlines()
-                if runs <10:
-                    last_status_message = lines[18]
-                else:
-                    last_status_message = lines[17]
-                last_status_message = lines[16]
-                print("Status", last_status_message)
-                # ---------------------------------------
-                # PARSE BATSMEN
-                # ---------------------------------------
-                batsmen = parse_batsmen(text)
+                if runs == 0 and over == 0 and ball == 0:
+                    last_status_message = lines[16]                    
+                    line = pre_game_scenario_commentary(last_status_message) + random.choice(COMMENTARY["WELCOME"])
+                    event ="TOSS"
+                    time.sleep(2)
+                else :
+                    if "CRR" in lines[17]:                                                     
+                        last_status_message = lines[16]
+                    else : 
+                        last_status_message = lines[17]
+                    print(last_status_message)
+                    
+                    # ---------------------------------------
+                    # PARSE BATSMEN
+                    # ---------------------------------------
+                    batsmen = parse_batsmen(text)
 
-                # Debug
-                """for b in batsmen:
-                    print("Batsman:", b)"""
+                    # Debug
+                    """for b in batsmen:
+                        print("Batsman:", b)"""
 
-                # ---------------------------------------
-                # DETECT EVENTS
-                # ---------------------------------------
-                events = detect_event(runs, wickets, over, ball, last_status_message)                
-                #commentary = generate_toss_commentary("LSG", "bat", is_win=True)
-                #print(commentary)
-                
-                if not events:
-                    time.sleep(REFRESH_INTERVAL)
-                    continue
+                    # ---------------------------------------
+                    # DETECT EVENTS
+                    # ---------------------------------------
+                    events = detect_event(runs, wickets, over, ball, last_status_message)                
+                    #commentary = generate_toss_commentary("LSG", "bat", is_win=True)
+                    #print(commentary)
+                    
+                    if not events:
+                        time.sleep(REFRESH_INTERVAL)
+                        continue
 
-                print("EVENTS:", events)
+                    print("EVENTS:", events)
 
-                # ---------------------------------------
-                # GENERATE NATURAL COMMENTARY
-                # ---------------------------------------
-                line = generate_continuous_commentary(
-                    events,
-                    batsmen,
-                    runs,
-                    wickets,
-                    over,
-                    "A",
-                    "B",
-                    last_status_message
-                )
+                    # ---------------------------------------
+                    # GENERATE NATURAL COMMENTARY
+                    # ---------------------------------------
+                    line = generate_continuous_commentary(
+                        events,
+                        batsmen,
+                        runs,
+                        wickets,
+                        over,
+                        "A",
+                        "B",
+                        last_status_message
+                    )
+                    event = events[0]
                 #print("🎙 FINAL:", line)
                 # ---------------------------------------
                 # OUTPUT
@@ -819,10 +841,10 @@ def main():
                     print("🎙 FINAL:", line)
 
                     # Save last main event
-                    write_json(runs, wickets, over, ball, events[0])
-                    print(events[0])
+                    write_json(runs, wickets, over, ball, event)
+                    print(event)
                     # Speak once (IMPORTANT FIX ✅)
-                    speak(events[0], line)
+                    speak(event, line)
                     
 
             except Exception as e:
