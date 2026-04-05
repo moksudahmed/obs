@@ -7,7 +7,7 @@ from queue import Queue
 import glob
 import json
 import sys
-
+from datetime import datetime
 # ==============================
 # OBS INTEGRATION FUNCTION
 # ==============================
@@ -165,6 +165,7 @@ async def generate_voice(text, filepath):
         try:
             print(f"  🔄 Attempt {attempt + 1}/3: Generating {os.path.basename(filepath)}...")
             
+            print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
             # Create the communicate object
             communicate = edge_tts.Communicate(text, VOICE)
             
@@ -215,7 +216,7 @@ async def generate_voice(text, filepath):
 # WORKER THREAD (FIXED - Better error handling)
 # ==============================
 
-def voice_worker():
+def voice_worker_old():
     """Background worker for voice generation with better error handling"""
     # Create new event loop for this thread
     loop = asyncio.new_event_loop()
@@ -258,7 +259,7 @@ def voice_worker():
                 if file_size > 500:  # Accept files > 500 bytes
                     print(f"✅ Successfully created: {os.path.basename(filename)} ({file_size} bytes)")
                     
-                    from datetime import datetime
+                   
                     print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
                     
                     # Mark as ready for OBS
@@ -295,6 +296,110 @@ def voice_worker():
             voice_queue.task_done()
             print(f"{'='*50}\n")
 
+def voice_worker():
+    """Background worker for voice generation - deletes old file AFTER new file is created"""
+    # Create new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Test edge_tts connection first
+    print("\n🔍 Testing Edge TTS connection...")
+    try:
+        test_result = loop.run_until_complete(test_edge_tts())
+        if not test_result:
+            print("⚠️ Warning: Edge TTS test failed, but will continue trying")
+    except Exception as e:
+        print(f"⚠️ Test error: {e}")
+    
+    while True:
+        try:
+            event, text = voice_queue.get()
+            
+            print(f"\n{'='*50}")
+            print(f"🎙 Processing: {event}")
+            print(f"📝 Text: {text}")
+            
+            # Mark as generating immediately
+            generating[event] = True
+            
+            # Generate new filename with timestamp
+            filename = get_timestamp_filename(event)
+            print(f"🔄 Target file: {os.path.basename(filename)}")
+            
+            # Store old files before generation (to delete later)
+            old_pattern = os.path.join(VOICE_FOLDER, f"{event}_*.mp3")
+            old_files_before = glob.glob(old_pattern)
+            print(f"📁 Found {len(old_files_before)} existing file(s) for {event}")
+            
+            # Generate new file directly
+            success = loop.run_until_complete(generate_voice(text, filename))
+            
+            if success and os.path.exists(filename):
+                file_size = os.path.getsize(filename)
+                if file_size > 500:  # Accept files > 500 bytes
+                    print(f"✅ Successfully created: {os.path.basename(filename)} ({file_size} bytes)")
+                    print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
+                    
+                    # Mark as ready for OBS FIRST
+                    update_obs_ready_file(event, filename)
+                    
+                    # Also store in local cache
+                    ready_files[event] = filename
+                    
+                    # NOW delete old files after new file is ready
+                    print(f"🗑️ Cleaning up old files for {event}...")
+                    deleted_count = 0
+                    for old_file in old_files_before:
+                        try:
+                            # Don't delete if it's the same as the new file
+                            if old_file != filename:
+                                if os.path.exists(old_file):
+                                    os.remove(old_file)
+                                    print(f"   Deleted: {os.path.basename(old_file)}")
+                                    deleted_count += 1
+                        except PermissionError:
+                            print(f"   ⚠️ Could not delete (in use): {os.path.basename(old_file)}")
+                        except Exception as e:
+                            print(f"   ⚠️ Error deleting {os.path.basename(old_file)}: {e}")
+                    
+                    if deleted_count > 0:
+                        print(f"📁 Deleted {deleted_count} old file(s)")
+                    
+                    # Final cleanup to ensure only latest remains
+                    time.sleep(0.2)
+                    cleanup_old_files()
+                    
+                else:
+                    print(f"❌ File validation failed: file too small ({file_size} bytes)")
+                    # Try to delete the corrupted new file
+                    try:
+                        os.remove(filename)
+                        print(f"🗑️ Deleted corrupted file: {os.path.basename(filename)}")
+                    except:
+                        pass
+                    
+                    # Keep old files since new file failed
+                    print(f"⚠️ Keeping old files for {event} due to generation failure")
+                    
+            else:
+                print(f"❌ Generation failed for: {event}")
+                # Try to get existing file as fallback
+                existing_files = glob.glob(os.path.join(VOICE_FOLDER, f"{event}_*.mp3"))
+                if existing_files:
+                    latest = max(existing_files, key=os.path.getmtime)
+                    print(f"🔄 Using existing file as fallback: {os.path.basename(latest)}")
+                    update_obs_ready_file(event, latest)
+                else:
+                    print(f"⚠️ No fallback file available for {event}")
+                
+        except Exception as e:
+            print(f"❌ Critical error in worker: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            generating[event] = False
+            voice_queue.task_done()
+            print(f"{'='*50}\n")
 # ==============================
 # PUBLIC API
 # ==============================
