@@ -8,6 +8,7 @@ import glob
 import json
 import sys
 from datetime import datetime
+
 # ==============================
 # OBS INTEGRATION FUNCTION
 # ==============================
@@ -296,7 +297,7 @@ def voice_worker_old():
             voice_queue.task_done()
             print(f"{'='*50}\n")
 
-def voice_worker():
+def voice_worker_3():
     """Background worker for voice generation - deletes old file AFTER new file is created"""
     # Create new event loop for this thread
     loop = asyncio.new_event_loop()
@@ -345,7 +346,12 @@ def voice_worker():
                     
                     # Also store in local cache
                     ready_files[event] = filename
-                    
+                    with open('C:/cricket_data/score.json', 'r+') as f:
+                        data = json.load(f)
+                        data[event] = filename # <--- add `id` value.
+                        f.seek(0)        # <--- should reset file position to the beginning.
+                        json.dump(data, f, indent=4)
+                        f.truncate()     # remove remaining part
                     # NOW delete old files after new file is ready
                     print(f"🗑️ Cleaning up old files for {event}...")
                     deleted_count = 0
@@ -400,6 +406,203 @@ def voice_worker():
             generating[event] = False
             voice_queue.task_done()
             print(f"{'='*50}\n")
+# File path
+file_path = 'C:/cricket_voices/score.json'
+
+# Load existing JSON data
+def load_json():
+    try:
+        with open(file_path, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+
+# Save updated JSON data
+def save_json(data):
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
+        
+def voice_worker():
+    """Background worker for voice generation - deletes old file AFTER new file is created"""
+    # Create new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Test edge_tts connection first
+    print("\n🔍 Testing Edge TTS connection...")
+    try:
+        test_result = loop.run_until_complete(test_edge_tts())
+        if not test_result:
+            print("⚠️ Warning: Edge TTS test failed, but will continue trying")
+    except Exception as e:
+        print(f"⚠️ Test error: {e}")
+    
+    while True:
+        try:
+            event, text = voice_queue.get()
+            
+            print(f"\n{'='*50}")
+            print(f"🎙 Processing: {event}")
+            print(f"📝 Text: {text}")
+            
+            # Mark as generating immediately
+            generating[event] = True
+            
+            # Generate new filename with timestamp
+            filename = get_timestamp_filename(event)
+            print(f"🔄 Target file: {os.path.basename(filename)}")
+            
+            # Store old files before generation (to delete later)
+            old_pattern = os.path.join(VOICE_FOLDER, f"{event}_*.mp3")
+            old_files_before = glob.glob(old_pattern)
+            print(f"📁 Found {len(old_files_before)} existing file(s) for {event}")
+            
+            # Generate new file directly
+            success = loop.run_until_complete(generate_voice(text, filename))
+            
+            if success and os.path.exists(filename):
+                file_size = os.path.getsize(filename)
+                if file_size > 500:  # Accept files > 500 bytes
+                    print(f"✅ Successfully created: {os.path.basename(filename)} ({file_size} bytes)")
+                    print(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
+                    
+                    # Mark as ready for OBS
+                    #update_obs_ready_file(event, filename)
+                    #ready_files[event] = filename
+                    
+                    # Update score.json
+                    # Load JSON
+                    with open(file_path, "r") as file:
+                        data = json.load(file)
+                    print(json.dumps(data, indent=4))
+                    
+                    # Update ONLY the "SINGLE" field
+                    #data[event] = filename   # অথবা আপনি যা দিতে চান
+                    data[data["event"]] = filename
+                    #data[event] = filename
+                    # Save back to file
+                    print("DATA")
+                    print(data)
+                    print(filename)
+                    with open(file_path, "w") as file:
+                        json.dump(data, file, indent=4)
+
+                    print("Event field updated successfully!", filename)
+                    #update_score_json(event, filename)
+                    
+                    # Delete old files after new file is ready
+                    print(f"🗑️ Cleaning up old files for {event}...")
+                    deleted_count = 0
+                    for old_file in old_files_before:
+                        try:
+                            if old_file != filename and os.path.exists(old_file):
+                                os.remove(old_file)
+                                print(f"   Deleted: {os.path.basename(old_file)}")
+                                deleted_count += 1
+                        except Exception as e:
+                            print(f"   ⚠️ Error deleting {os.path.basename(old_file)}: {e}")
+                    
+                    if deleted_count > 0:
+                        print(f"📁 Deleted {deleted_count} old file(s)")
+                    
+                    # Final cleanup
+                    time.sleep(0.2)
+                    cleanup_old_files()
+                    
+                else:
+                    print(f"❌ File validation failed: file too small ({file_size} bytes)")
+                    try:
+                        os.remove(filename)
+                        print(f"🗑️ Deleted corrupted file: {os.path.basename(filename)}")
+                    except:
+                        pass
+                    print(f"⚠️ Keeping old files for {event} due to generation failure")
+                    
+            else:
+                print(f"❌ Generation failed for: {event}")
+                existing_files = glob.glob(os.path.join(VOICE_FOLDER, f"{event}_*.mp3"))
+                if existing_files:
+                    latest = max(existing_files, key=os.path.getmtime)
+                    print(f"🔄 Using existing file as fallback: {os.path.basename(latest)}")
+                    update_obs_ready_file(event, latest)
+                    #update_score_json(event, latest)
+                else:
+                    print(f"⚠️ No fallback file available for {event}")
+                
+        except Exception as e:
+            print(f"❌ Critical error in worker: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            generating[event] = False
+            voice_queue.task_done()
+            print(f"{'='*50}\n")
+
+
+def update_score_json(event, filename):
+    """Update score.json with the event and filename"""
+    score_file_path = 'C:/cricket_data/score.json'
+    
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(score_file_path), exist_ok=True)
+        
+        # Define all possible event fields
+        all_event_fields = [
+            "WICKET", "OVER_COMPLETE", "SINGLE", "DOUBLE", 
+            "FOUR", "SIX", "WIDE", "NO_BALL", "BYE", 
+            "LEG_BYE", "FIFTY", "HUNDRED", "NEW_BATSMAN"
+        ]
+        
+        # Read existing data or create new
+        if os.path.exists(score_file_path):
+            with open(score_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            # Default structure
+            data = {
+                "runs": 0,
+                "wickets": 0,
+                "over": 0,
+                "ball": 0,
+                "event": ""
+            }
+            # Add all event fields with empty strings
+            for field in all_event_fields:
+                data[field] = ""
+        
+        # Ensure all event fields exist (for backward compatibility)
+        for field in all_event_fields:
+            if field not in data:
+                data[field] = ""
+        
+        # Update the data
+        data["event"] = event          # Store the event type
+        data[event] = filename         # Store the filename for this event
+        
+        print(f"📝 Updating score.json:")
+        print(f"   - event: {event}")
+        print(f"   - {event}: {filename}")
+        
+        # Write back to file
+        with open(score_file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        # Verify the update
+        with open(score_file_path, 'r', encoding='utf-8') as f:
+            verify_data = json.load(f)
+            if verify_data.get(event) == filename:
+                print(f"✅ Successfully verified {event} in score.json")
+            else:
+                print(f"⚠️ Warning: {event} in score.json is '{verify_data.get(event)}', expected '{filename}'")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error updating score.json: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 # ==============================
 # PUBLIC API
 # ==============================
