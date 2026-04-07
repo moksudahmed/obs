@@ -382,7 +382,31 @@ def generate_toss_commentary(team, decision, is_win=True):
     
     return generate_event_commentary(events, context)
 
-import re
+
+def generate_break_commentary(status):
+    """
+    Generate commentary for toss and team selection
+    
+    Args:
+        team: Team name (e.g., "LSG", "MI", "CSK")
+        decision: "bat" or "bowl"
+        is_win: True if team won the toss, False if lost
+    """
+    events = []
+    context = {'team': team}
+    
+    if status == "Drinks Break":
+        line = random.choice(COMMENTARY["DRINKS_BREAK"])
+    if status == "Innings Break":
+        line = random.choice(COMMENTARY["INNINGS_BREAK"])
+    if status == "Tea Break":
+        line = random.choice(COMMENTARY["TEA_BREAK"])
+    if  status == "Lunch Break":
+        line = random.choice(COMMENTARY["LUNCH_BREAK"])
+    if status == "Rain Break (Delayed)":
+        line = random.choice(COMMENTARY["RAIN_DELAY"])       
+        
+    return line
 
 def pre_game_scenario_commentary(text: str) -> str:
     if not text:
